@@ -18,11 +18,13 @@ class Index {
         map = new HashMap<>();
 
         for (int i = 1; i<100; i++){
-            String file = "Project2Dataset/F"+i+".txt";
+            String file = "src/Project2Dataset/F"+i+".txt";
+            //System.out.println(file);
             byte[] bytes = Files.readAllBytes(Paths.get(file));
             String str = new String(bytes);
             for (int j = 0; j<100; j++){
-                int start = j*40+34;
+                int start = j*40+33;
+                //System.out.println(str.substring(start, start+4));
                 int ranNum = Integer.parseInt(str.substring(start, start+4));
                 //Retrieve preexisting string or empty
                 String val = map.getOrDefault(ranNum, "");
@@ -36,7 +38,7 @@ class Index {
                 //Add all strings together, format is Map(Random Number, FileNumber + RecordNumber looped
                 val = val+f+recStr;
 
-                arr[ranNum] = val;
+                arr[ranNum-1] = val;
                 map.put(ranNum, val);
 
             }
@@ -52,41 +54,38 @@ class Index {
 public class Main {
 
 
-
-
-
-
     public static void main(String[] args) throws IOException {
         boolean indexExists = false;
         Index ind = null;
         Scanner scan = new Scanner(System.in);
         while (true){
+            System.out.println("Program is ready and waiting for user command");
             String input = scan.nextLine();
             if (input.equals("CREATE INDEX ON Project2Dataset (RandomV)")){
                 ind = new Index();
                 indexExists = true;
-            } else if (input.contains("=")) {
+                System.out.println("The hash-based and array-based indexes are built successfully");
+            } else if (input.contains("=") && !input.contains("!=")) {
                 // Equality case
-                System.out.println("Equality query: " + input);
                 String[] parts = input.split("=");
                 int v = Integer.parseInt(parts[1].trim());
                 Instant start = Instant.now();
                 int accessed=0;
                 if (indexExists) {
                     HashSet<Integer> hs = new HashSet<>();
-                    System.out.println("Index scan");
+                    System.out.println("Hash-Based Index scan: ");
                     String recs = ind.map.get(v);
                     getVals(hs, recs);
                     accessed=hs.size();
                 } else {
-                    System.out.println("Table scan");
+                    System.out.println("Table scan: ");
                     for (int i = 1; i<100; i++){
-                        String file = "Project2Dataset/F"+i+".txt";
+                        String file = "src/Project2Dataset/F"+i+".txt";
                         byte[] bytes = Files.readAllBytes(Paths.get(file));
                         String str = new String(bytes);
                         for (int j = 0; j<100; j++){
                             int cur = j*40;
-                            int ranNum = Integer.parseInt(str.substring(cur+34, cur+38));
+                            int ranNum = Integer.parseInt(str.substring(cur+33, cur+37));
                             if (ranNum==v){
                                 System.out.println(str.substring(cur, cur+40));
                             }
@@ -96,37 +95,39 @@ public class Main {
                     accessed=99;
                 }
                 Duration tot = Duration.between(start, Instant.now());
-                System.out.println("Time for retrieval: "+tot.getSeconds());
+                System.out.println("Time for retrieval: "+tot.getNano()/1000000+" ms");
                 System.out.println("Number of files accessed: "+accessed);
 
 
             } else if (input.contains(">") && input.contains("<")) {
                 // Range case
-                System.out.println("Range query: " + input);
-                int v1 = Integer.parseInt(input.split(">")[1].split("<")[0].trim());
+                // Extract lower bound
+                int v1 = Integer.parseInt(input.split(">")[1].split("AND")[0].trim());
+
+                // Extract upper bound
                 int v2 = Integer.parseInt(input.split("<")[1].trim());
                 Instant start = Instant.now();
                 int accessed=0;
 
                 if (indexExists) {
-                    System.out.println("Index scan");
+                    System.out.println("Array-Based Index scan: ");
                     HashSet<Integer> hs = new HashSet<>();
-                    for (int j = v1; j<v2; j++){
-
+                    for (int j = v1; j<v2-1; j++){
+                        //array indexes are -1 their actual value, so start at lower bound
                         String recs = ind.arr[j];
                         getVals(hs, recs);
                     }
 
                     accessed=hs.size();
                 } else {
-                    System.out.println("Table scan");
+                    System.out.println("Table scan: ");
                     for (int i = 1; i<100; i++){
-                        String file = "Project2Dataset/F"+i+".txt";
+                        String file = "src/Project2Dataset/F"+i+".txt";
                         byte[] bytes = Files.readAllBytes(Paths.get(file));
                         String str = new String(bytes);
                         for (int j = 0; j<100; j++){
                             int cur = j*40;
-                            int ranNum = Integer.parseInt(str.substring(cur+34, cur+38));
+                            int ranNum = Integer.parseInt(str.substring(cur+33, cur+37));
                             if (ranNum>v1 && ranNum<v2){
                                 System.out.println(str.substring(cur, cur+40));
                             }
@@ -136,22 +137,21 @@ public class Main {
                     accessed=99;
                 }
                 Duration tot = Duration.between(start, Instant.now());
-                System.out.println("Time for retrieval: "+tot.getSeconds());
+                System.out.println("Time for retrieval: "+tot.getNano()/1000000+" ms");
                 System.out.println("Number of files accessed: "+accessed);
 
             } else if (input.contains("!=")) {
                 // Inequality case
-                System.out.println("Inequality query: " + input);
                 int v = Integer.parseInt(input.split("!=")[1].trim());
-                System.out.println("Table scan");
+                System.out.println("Table scan: ");
                 Instant start = Instant.now();
                 for (int i = 1; i<100; i++){
-                    String file = "Project2Dataset/F"+i+".txt";
+                    String file = "src/Project2Dataset/F"+i+".txt";
                     byte[] bytes = Files.readAllBytes(Paths.get(file));
                     String str = new String(bytes);
                     for (int j = 0; j<100; j++){
                         int cur = j*40;
-                        int ranNum = Integer.parseInt(str.substring(cur+34, cur+38));
+                        int ranNum = Integer.parseInt(str.substring(cur+33, cur+37));
                         if (ranNum!= v){
                             System.out.println(str.substring(cur, cur+40));
                         }
@@ -159,7 +159,7 @@ public class Main {
                 }
 
                 Duration tot = Duration.between(start, Instant.now());
-                System.out.println("Time for retrieval: "+tot.getSeconds());
+                System.out.println("Time for retrieval: "+tot.getNano()/1000000+" ms");
                 System.out.println("Number of files accessed: 99");
             } else {
                 // Invalid input
@@ -173,7 +173,7 @@ public class Main {
         for (int i = 0; i<recs.length(); i+=4){
             int f = Integer.parseInt(recs.substring(i, i+2))+1;
             hs.add(f);
-            String file = "Project2Dataset/F"+f+".txt";
+            String file = "src/Project2Dataset/F"+f+".txt";
 
             int r = Integer.parseInt(recs.substring(i+2, i+4));
 
